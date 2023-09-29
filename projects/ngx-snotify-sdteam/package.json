@@ -1,7 +1,8 @@
 {
   "name": "ngx-snotify-sdteam",
-  "description": "Angular 2+ alternative notifications center",
-  "version": "16.0.0-alpha.1",
+  "description": "",
+  "version": "16.0.1",
+  "license": "MIT",
   "peerDependencies": {
     "@angular/common": "16",
     "@angular/core": "16"

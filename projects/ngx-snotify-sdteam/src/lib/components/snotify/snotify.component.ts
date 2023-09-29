@@ -44,8 +44,8 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    * How many toasts with backdrop in current queue
    */
   withBackdrop: SnotifyToast[];
-
-  constructor(private service: SnotifyService) {}
+  closeOnBackground: boolean;
+  constructor(private service: SnotifyService) { }
 
   /**
    * Init base options. Subscribe to options, lifecycle change
@@ -65,6 +65,7 @@ export class SnotifyComponent implements OnInit, OnDestroy {
         this.blockSizeB = this.service.config.global.maxAtPosition;
         this.withBackdrop = toasts.filter(toast => toast.config.backdrop >= 0).reverse();
       }
+      this.closeOnBackground = this.service.config.global.closeOnBackgroundClick
       this.notifications = this.splitToasts(toasts.slice(this.dockSizeA, this.dockSizeB));
       this.stateChanged('mounted');
     });
@@ -76,6 +77,14 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    * @param event SnotifyEventType
    */
   stateChanged(event: SnotifyEventType) {
+    if (this.closeOnBackground) {
+      if (event == 'mounted' && this.backdrop != 0) {
+        this.backdrop = -1
+        return
+      }
+      this.backdrop = 0
+      return
+    }
     if (!this.withBackdrop.length) {
       if (this.backdrop >= 0) {
         this.backdrop = -1;
@@ -130,5 +139,27 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    */
   ngOnDestroy() {
     this.emitter.unsubscribe();
+  }
+  remove() {
+    if (this.closeOnBackground) {
+      if (this.notifications.centerTop.length > 0)
+        this.notifications.centerTop.map(x => this.service.remove(x.id))
+      if (this.notifications.centerCenter.length > 0)
+        this.notifications.centerCenter.map(x => this.service.remove(x.id))
+      if (this.notifications.centerBottom.length > 0)
+        this.notifications.centerBottom.map(x => this.service.remove(x.id))
+      if (this.notifications.leftTop.length > 0)
+        this.notifications.leftTop.map(x => this.service.remove(x.id))
+      if (this.notifications.leftCenter.length > 0)
+        this.notifications.leftCenter.map(x => this.service.remove(x.id))
+      if (this.notifications.leftBottom.length > 0)
+        this.notifications.leftBottom.map(x => this.service.remove(x.id))
+      if (this.notifications.rightTop.length > 0)
+        this.notifications.rightTop.map(x => this.service.remove(x.id))
+      if (this.notifications.rightCenter.length > 0)
+        this.notifications.rightCenter.map(x => this.service.remove(x.id))
+      if (this.notifications.rightBottom.length > 0)
+        this.notifications.rightBottom.map(x => this.service.remove(x.id))
+    }
   }
 }

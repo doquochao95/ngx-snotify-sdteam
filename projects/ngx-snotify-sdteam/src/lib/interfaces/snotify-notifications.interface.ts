@@ -4,15 +4,15 @@ import { SnotifyToast } from '../models/snotify-toast.model';
  * Notifications object
  */
 export interface SnotifyNotifications {
-  left_top?: SnotifyToast[];
-  left_center?: SnotifyToast[];
-  left_bottom?: SnotifyToast[];
+  leftTop?: SnotifyToast[];
+  leftCenter?: SnotifyToast[];
+  leftBottom?: SnotifyToast[];
 
-  right_top?: SnotifyToast[];
-  right_center?: SnotifyToast[];
-  right_bottom?: SnotifyToast[];
+  rightTop?: SnotifyToast[];
+  rightCenter?: SnotifyToast[];
+  rightBottom?: SnotifyToast[];
 
-  center_top?: SnotifyToast[];
-  center_center?: SnotifyToast[];
-  center_bottom?: SnotifyToast[];
+  centerTop?: SnotifyToast[];
+  centerCenter?: SnotifyToast[];
+  centerBottom?: SnotifyToast[];
 }

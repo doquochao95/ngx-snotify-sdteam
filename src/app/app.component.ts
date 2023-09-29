@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { SnotifyPosition, SnotifyService, SnotifyToastConfig } from 'ng-alt-snotify';
+import { SnotifyPosition, SnotifyService, SnotifyToastConfig } from 'dist/ngx-snotify-sdteam';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -23,6 +23,7 @@ export class AppComponent {
   pauseHover = true;
   titleMaxLength = 15;
   bodyMaxLength = 80;
+  closeOnBackGroundClick = false;
 
   constructor(private snotifyService: SnotifyService) {}
 
@@ -36,7 +37,8 @@ export class AppComponent {
         maxAtPosition: this.blockMax,
         maxOnScreen: this.dockMax,
         // @ts-ignore
-        filterDuplicates: this.filterDuplicates
+        filterDuplicates: this.filterDuplicates,
+        closeOnBackgroundClick : this.closeOnBackGroundClick
       }
     });
     return {
