@@ -1,7 +1,7 @@
 {
   "name": "ngx-snotify-sdteam",
   "description": "",
-  "version": "16.0.1",
+  "version": "16.0.5",
   "license": "MIT",
   "peerDependencies": {
     "@angular/common": "16",
@@ -9,5 +9,19 @@
   },
   "dependencies": {
     "tslib": "^2.3.0"
-  }
+  },
+  "module": "fesm2022/ngx-snotify-sdteam.mjs",
+  "typings": "index.d.ts",
+  "exports": {
+    "./package.json": {
+      "default": "./package.json"
+    },
+    ".": {
+      "types": "./index.d.ts",
+      "esm2022": "./esm2022/ngx-snotify-sdteam.mjs",
+      "esm": "./esm2022/ngx-snotify-sdteam.mjs",
+      "default": "./fesm2022/ngx-snotify-sdteam.mjs"
+    }
+  },
+  "sideEffects": false
 }

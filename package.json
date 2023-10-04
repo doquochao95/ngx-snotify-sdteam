@@ -1,6 +1,6 @@
 {
   "name": "ngx-snotify-sdteam-example",
-  "version": "16.0.1",
+  "version": "16.0.5",
   "scripts": {
     "ng": "ng",
     "start": "ng serve ngx-snotify-sdteam-example",
