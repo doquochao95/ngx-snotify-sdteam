@@ -139,7 +139,7 @@ export class AppComponent {
     /*
     Here we pass an buttons array, which contains of 2 element of type SnotifyButton
      */
-    const { timeout, closeOnClick, ...config } = this.getConfig(); // Omit props what i don't need
+    const { closeOnClick, ...config } = this.getConfig(); // Omit props what i don't need
     this.snotifyService.confirm(this.body, this.title, {
       ...config,
       buttons: [

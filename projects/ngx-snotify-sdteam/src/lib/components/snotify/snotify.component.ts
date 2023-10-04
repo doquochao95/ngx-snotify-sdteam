@@ -78,38 +78,31 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    */
   stateChanged(event: SnotifyEventType) {
     if (this.closeOnBackground) {
-      if (event == 'mounted' && this.backdrop != 0) {
-        this.backdrop = -1
-        return
+      let notlen = this.getNotificationLength()
+      if (!this.withBackdrop.length) {
+        if (event == 'mounted') {
+          if (this.backdrop != -1 && notlen == 0)
+            this.backdrop = -1
+        }
+        else {
+          if (this.backdrop != 0)
+            this.backdrop = 0
+        }
       }
-      this.backdrop = 0
-      return
+      else {
+        if (event == 'mounted') {
+          if (this.backdrop < 0)
+            this.backdrop = 0
+        }
+        else
+          this.backdrop = this.withBackdrop[this.withBackdrop.length - 1].config.backdrop
+      }
     }
-    if (!this.withBackdrop.length) {
-      if (this.backdrop >= 0) {
+    else {
+      if (!this.withBackdrop.length)
         this.backdrop = -1;
-      }
-      return;
-    }
-    switch (event) {
-      case 'mounted':
-        if (this.backdrop < 0) {
-          this.backdrop = 0;
-        }
-        break;
-      case 'beforeShow':
+      else
         this.backdrop = this.withBackdrop[this.withBackdrop.length - 1].config.backdrop;
-        break;
-      case 'beforeHide':
-        if (this.withBackdrop.length === 1) {
-          this.backdrop = 0;
-        }
-        break;
-      case 'hidden':
-        if (this.withBackdrop.length === 1) {
-          this.backdrop = -1;
-        }
-        break;
     }
   }
 
@@ -141,7 +134,8 @@ export class SnotifyComponent implements OnInit, OnDestroy {
     this.emitter.unsubscribe();
   }
   remove() {
-    if (this.closeOnBackground) {
+    let notlen = this.getNotificationLength()
+    if (this.closeOnBackground && notlen > 0) {
       if (this.notifications.centerTop.length > 0)
         this.notifications.centerTop.map(x => this.service.remove(x.id))
       if (this.notifications.centerCenter.length > 0)
@@ -161,5 +155,11 @@ export class SnotifyComponent implements OnInit, OnDestroy {
       if (this.notifications.rightBottom.length > 0)
         this.notifications.rightBottom.map(x => this.service.remove(x.id))
     }
+  }
+  getNotificationLength = (): number => {
+    let result = this.notifications.centerBottom.length + this.notifications.centerCenter.length + this.notifications.centerTop.length +
+      this.notifications.leftBottom.length + this.notifications.leftCenter.length + this.notifications.leftTop.length +
+      this.notifications.rightBottom.length + this.notifications.rightCenter.length + this.notifications.rightTop.length
+    return result
   }
 }
