@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { SnotifyService } from '../../services/snotify.service';
 import { SnotifyToast } from '../../models/snotify-toast.model';
 import { Subscription } from 'rxjs';
@@ -45,7 +45,8 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    */
   withBackdrop: SnotifyToast[];
   closeOnBackground: boolean;
-  constructor(private service: SnotifyService) { }
+  isBackdropClick: boolean = false
+  constructor(private service: SnotifyService, private cd: ChangeDetectorRef) { }
 
   /**
    * Init base options. Subscribe to options, lifecycle change
@@ -67,7 +68,6 @@ export class SnotifyComponent implements OnInit, OnDestroy {
       }
       this.closeOnBackground = this.service.config.global.closeOnBackgroundClick
       this.notifications = this.splitToasts(toasts.slice(this.dockSizeA, this.dockSizeB));
-      this.stateChanged('mounted');
     });
   }
 
@@ -76,32 +76,26 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    * Changes the backdrop opacity
    * @param event SnotifyEventType
    */
-  stateChanged(event: SnotifyEventType) {
-    if (!this.withBackdrop.length) {
-      if (this.backdrop >= 0)
-        this.backdrop = -1;
-      return;
-    }
-    switch (event) {
-      case 'mounted':
-        if (this.backdrop < 0) {
-          this.backdrop = 0;
-        }
-        break;
+  stateChanged(event: { type: SnotifyEventType, toast: SnotifyToast }) {
+    switch (event.type) {
       case 'beforeShow':
-        this.backdrop = this.withBackdrop[this.withBackdrop.length - 1].config.backdrop;
+        if (this.backdrop < 0)
+          this.backdrop = 0;
+        break;
+      case 'shown':
+        this.backdrop = this.withBackdrop[this.withBackdrop.length - 1]?.config.backdrop ?? -1;
         break;
       case 'beforeHide':
-        if (this.withBackdrop.length === 1) {
+        if ((this.withBackdrop.length === 1 && this.withBackdrop.some(x => x.id == event.toast.id) || this.isBackdropClick))
           this.backdrop = 0;
-        }
         break;
       case 'hidden':
-        if (this.withBackdrop.length === 1) {
+        if ((this.withBackdrop.length === 1 && this.withBackdrop.some(x => x.id == event.toast.id) || this.isBackdropClick))
           this.backdrop = -1;
-        }
         break;
     }
+    this.isBackdropClick = false
+    this.cd.detectChanges();
   }
 
   /**
@@ -134,6 +128,7 @@ export class SnotifyComponent implements OnInit, OnDestroy {
   remove() {
     let notlen = this.getNotificationLength()
     if (this.closeOnBackground && notlen > 0) {
+      this.isBackdropClick = true
       if (this.notifications.centerTop.length > 0)
         this.notifications.centerTop.map(x => this.service.remove(x.id))
       if (this.notifications.centerCenter.length > 0)

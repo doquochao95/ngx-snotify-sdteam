@@ -23,6 +23,5 @@ export class PromptComponent {
 
   handleInput($event: Event) {
     this.toast.value = ($event.target as HTMLInputElement).value;
-    this.toast.eventEmitter.next('input');
   }
 }

@@ -1,5 +1,6 @@
 import {
-  AfterContentInit,
+  AfterViewInit,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   Input,
@@ -19,12 +20,12 @@ import { SnotifyStyle } from '../../enums/snotify-style.enum';
   templateUrl: './toast.component.html',
   encapsulation: ViewEncapsulation.None
 })
-export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
+export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Get toast from notifications array
    */
   @Input() toast: any | SnotifyToast;
-  @Output() stateChanged = new EventEmitter<SnotifyEventType>();
+  @Output() stateChanged = new EventEmitter<{ type: SnotifyEventType, toast: SnotifyToast }>();
 
   toastDeletedSubscription: Subscription;
   toastChangedSubscription: Subscription;
@@ -45,7 +46,7 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
     promptType: SnotifyStyle.prompt
   };
 
-  constructor(private service: SnotifyService) {}
+  constructor(private service: SnotifyService, private cd: ChangeDetectorRef) { }
 
   // Lifecycles
 
@@ -66,16 +67,17 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
     if (!this.toast.config.timeout) {
       this.toast.config.showProgressBar = false;
     }
-    this.toast.eventEmitter.next('mounted');
-    this.state.animation = 'snotifyToast--in';
   }
 
-  ngAfterContentInit() {
+  ngAfterViewInit() {
+    this.stateChanged.emit({ type: 'beforeShow', toast: this.toast });
+    this.state.animation = 'snotifyToast--in';
     setTimeout(() => {
-      this.stateChanged.emit('beforeShow');
-      this.toast.eventEmitter.next('beforeShow');
+      this.stateChanged.emit({ type: 'shown', toast: this.toast });
       this.state.animation = this.toast.config.animation.enter;
-    }, this.service.config.toast.animation.time / 5); // time to show toast push animation (snotifyToast--in)
+      this.onExitTransitionEnd()
+    }, this.service.config.toast.animation.time / 2); // time to show toast push animation (snotifyToast--in)
+    this.cd.detectChanges();
   }
 
   /**
@@ -83,7 +85,6 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
    */
   ngOnDestroy(): void {
     cancelAnimationFrame(this.animationFrame);
-    this.toast.eventEmitter.next('destroyed');
     this.toastChangedSubscription.unsubscribe();
     this.toastDeletedSubscription.unsubscribe();
   }
@@ -96,7 +97,6 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
    * Trigger OnClick lifecycle
    */
   onClick() {
-    this.toast.eventEmitter.next('click');
     if (this.toast.config.closeOnClick) {
       this.service.remove(this.toast.id);
     }
@@ -107,11 +107,10 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
    */
   onRemove() {
     this.state.isDestroying = true;
-    this.toast.eventEmitter.next('beforeHide');
-    this.stateChanged.emit('beforeHide');
+    this.stateChanged.emit({ type: 'beforeHide', toast: this.toast });
     this.state.animation = this.toast.config.animation.exit;
     setTimeout(() => {
-      this.stateChanged.emit('hidden');
+      this.stateChanged.emit({ type: 'hidden', toast: this.toast });
       this.state.animation = 'snotifyToast--out';
       this.toast.eventEmitter.next('hidden');
       setTimeout(() => this.service.remove(this.toast.id, true), this.toast.config.animation.time / 2);
@@ -122,7 +121,6 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
    * Trigger onHoverEnter lifecycle
    */
   onMouseEnter() {
-    this.toast.eventEmitter.next('mouseenter');
     if (this.toast.config.pauseOnHover) {
       this.state.paused = true;
     }
@@ -136,7 +134,6 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
       this.state.paused = false;
       this.startTimeout(this.toast.config.timeout * this.state.progress);
     }
-    this.toast.eventEmitter.next('mouseleave');
   }
 
   /**
@@ -147,7 +144,6 @@ export class ToastComponent implements OnInit, OnDestroy, AfterContentInit {
       return;
     }
     this.initToast();
-    this.toast.eventEmitter.next('shown');
   }
 
   /*
