@@ -1,6 +1,6 @@
 {
   "name": "ngx-snotify-sdteam-example",
-  "version": "16.0.5",
+  "version": "16.0.6",
   "scripts": {
     "ng": "ng",
     "start": "ng serve ngx-snotify-sdteam-example",
@@ -20,7 +20,6 @@
     "@angular/platform-browser-dynamic": "~16.2.3",
     "@angular/router": "~16.2.3",
     "bootstrap": "^5.1.3",
-    "ngx-snotify-sdteam": "^16.0.1",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
     "zone.js": "^0.13.1"

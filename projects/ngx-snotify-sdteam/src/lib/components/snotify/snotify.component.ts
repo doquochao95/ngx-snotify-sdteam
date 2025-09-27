@@ -77,32 +77,30 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    * @param event SnotifyEventType
    */
   stateChanged(event: SnotifyEventType) {
-    if (this.closeOnBackground) {
-      let notlen = this.getNotificationLength()
-      if (!this.withBackdrop.length) {
-        if (event == 'mounted') {
-          if (this.backdrop != -1 && notlen == 0)
-            this.backdrop = -1
-        }
-        else {
-          if (this.backdrop != 0)
-            this.backdrop = 0
-        }
-      }
-      else {
-        if (event == 'mounted') {
-          if (this.backdrop < 0)
-            this.backdrop = 0
-        }
-        else
-          this.backdrop = this.withBackdrop[this.withBackdrop.length - 1].config.backdrop
-      }
-    }
-    else {
-      if (!this.withBackdrop.length)
+    if (!this.withBackdrop.length) {
+      if (this.backdrop >= 0)
         this.backdrop = -1;
-      else
+      return;
+    }
+    switch (event) {
+      case 'mounted':
+        if (this.backdrop < 0) {
+          this.backdrop = 0;
+        }
+        break;
+      case 'beforeShow':
         this.backdrop = this.withBackdrop[this.withBackdrop.length - 1].config.backdrop;
+        break;
+      case 'beforeHide':
+        if (this.withBackdrop.length === 1) {
+          this.backdrop = 0;
+        }
+        break;
+      case 'hidden':
+        if (this.withBackdrop.length === 1) {
+          this.backdrop = -1;
+        }
+        break;
     }
   }
 

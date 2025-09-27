@@ -13,7 +13,12 @@
     "noFallthroughCasesInSwitch": false,
     "sourceMap": true,
     "paths": {
-      "ng-alt-snotify": ["dist/ng-alt-snotify/ng-alt-snotify", "dist/ng-alt-snotify"]
+      "ngx-snotify-sdteam": [
+        "dist/ngx-snotify-sdteam"
+      ],
+      "ngx-snotify-sdteam/*": [
+        "dist/ngx-snotify-sdteam/*"
+      ]
     },
     "declaration": false,
     "downlevelIteration": true,
@@ -22,7 +27,10 @@
     "importHelpers": true,
     "target": "es2022",
     "module": "es2022",
-    "lib": ["es2020", "dom"]
+    "lib": [
+      "es2020",
+      "dom"
+    ]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
