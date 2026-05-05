@@ -32,9 +32,4 @@ export interface SnotifyGlobalConfig {
    *
    */
   filterDuplicates?: boolean;
-
-  /**
-    * Should toasts close on background click?
-    */
-  closeOnBackgroundClick?: boolean;
 }

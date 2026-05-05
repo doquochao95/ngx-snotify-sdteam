@@ -67,6 +67,10 @@ export interface SnotifyToastConfig {
    */
   iconClass?: string;
   /**
+   * Should this toast close when backdrop is clicked?
+   */
+  closeOnBackgroundClick?: boolean;
+  /**
    * Backdrop opacity.
    * * **Range:** `0.0 - 1.0`.
    * * **Disabled:** `-1`

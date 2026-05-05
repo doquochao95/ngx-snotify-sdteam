@@ -48,12 +48,16 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    * How many toasts with backdrop in current queue
    */
   withBackdrop: SnotifyToast[];
-  closeOnBackground: boolean;
   isBackdropClick: boolean = false;
   /**
    * Set of toast IDs that are currently hiding (in beforeHide state)
    */
   hidingToasts = new Set<number>();
+  /**
+   * Track which visible toast IDs had backdrop in the previous emission cycle.
+   * Used to detect toasts that vanished without going through hide animation
+   */
+  private previousBackdropIds = new Set<number>();
   constructor(private service: SnotifyService, private cd: ChangeDetectorRef) { }
 
   /**
@@ -61,21 +65,69 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    */
   ngOnInit() {
     this.emitter = this.service.emitter.subscribe((toasts: SnotifyToast[]) => {
-      if (this.service.config.global.newOnTop) {
-        this.dockSizeA = -this.service.config.global.maxOnScreen;
+      const globalConfig = this.service.config.global;
+      if (globalConfig.newOnTop) {
+        this.dockSizeA = -globalConfig.maxOnScreen;
         this.dockSizeB = undefined;
-        this.blockSizeA = -this.service.config.global.maxAtPosition;
+        this.blockSizeA = -globalConfig.maxAtPosition;
         this.blockSizeB = undefined;
-        this.withBackdrop = toasts.filter(toast => toast.config.backdrop >= 0);
       } else {
         this.dockSizeA = 0;
-        this.dockSizeB = this.service.config.global.maxOnScreen;
+        this.dockSizeB = globalConfig.maxOnScreen;
         this.blockSizeA = 0;
-        this.blockSizeB = this.service.config.global.maxAtPosition;
-        this.withBackdrop = toasts.filter(toast => toast.config.backdrop >= 0).reverse();
+        this.blockSizeB = globalConfig.maxAtPosition;
       }
-      this.closeOnBackground = this.service.config.global.closeOnBackgroundClick
-      this.notifications = this.splitToasts(toasts.slice(this.dockSizeA, this.dockSizeB));
+      const visibleToasts = toasts.slice(this.dockSizeA, this.dockSizeB);
+      // Split first, then compute actually rendered toasts (after both maxOnScreen AND maxAtPosition)
+      const splitNotifications = this.splitToasts(visibleToasts);
+      const renderedToasts: SnotifyToast[] = [];
+      Object.values(splitNotifications).forEach((posToasts: SnotifyToast[]) => {
+        renderedToasts.push(...posToasts.slice(this.blockSizeA, this.blockSizeB));
+      });
+      // Only actually rendered toasts can contribute to backdrop opacity.
+      this.withBackdrop = renderedToasts.filter(toast => toast.config.backdrop >= 0);
+      if (!globalConfig.newOnTop) {
+        this.withBackdrop.reverse();
+      }
+      const currentBackdropIds = new Set(this.withBackdrop.map(t => t.id));
+      // Detect backdrop toasts that disappeared without going through stateChanged lifecycle.
+      let hasOrphanedBackdropToast = false;
+      this.previousBackdropIds.forEach(prevId => {
+        if (!currentBackdropIds.has(prevId)) {
+          hasOrphanedBackdropToast = true;
+          this.hidingToasts.delete(prevId);
+        }
+      });
+      // Clean up hidingToasts for any toast no longer in the full queue
+      const allIds = new Set(toasts.map(t => t.id));
+      this.hidingToasts.forEach(id => {
+        if (!allIds.has(id)) {
+          this.hidingToasts.delete(id);
+        }
+      });
+      // Recalculate what backdrop should be based on remaining rendered toasts
+      const activeBackdrops = this.withBackdrop
+        .filter(t => !this.hidingToasts.has(t.id))
+        .map(t => t.config.backdrop);
+      const maxActive = activeBackdrops.length ? Math.max(...activeBackdrops) : -1;
+      // If the queue is now empty, force backdrop reset
+      if (toasts.length === 0) {
+        this.backdrop = -1;
+        this.isBackdropClick = false;
+        this.hidingToasts.clear();
+      }
+      // If any backdrop toast was evicted without 'hidden' event,
+      // recalculate backdrop from the remaining rendered toasts
+      else if (hasOrphanedBackdropToast) {
+        this.backdrop = maxActive;
+        if (this.backdrop < 0) {
+          this.isBackdropClick = false;
+        }
+      }
+      // Save current backdrop IDs for next cycle comparison
+      this.previousBackdropIds = currentBackdropIds;
+      this.notifications = splitNotifications;
+      this.cd.detectChanges();
     });
   }
 
@@ -99,14 +151,23 @@ export class SnotifyComponent implements OnInit, OnDestroy {
         if (event.toast.config.backdrop >= 0) this.backdrop = maxActive;
         break;
       case 'beforeHide':
-        this.backdrop = Math.max(maxActive, 0);
+        if (this.backdrop >= 0) {
+          this.backdrop = Math.max(maxActive, 0);
+        }
         break;
       case 'hidden':
-        if (maxActive < 0 || this.isBackdropClick) {
-          this.backdrop = -1;
-          this.isBackdropClick = false;
-        }
         this.hidingToasts.delete(event.toast.id);
+        if (this.isBackdropClick) {
+          // Keep backdrop hidden until ALL toasts finish their hide animation
+          this.backdrop = -1;
+          if (this.hidingToasts.size === 0) {
+            this.isBackdropClick = false;
+          }
+        } else if (maxActive < 0) {
+          this.backdrop = -1;
+        } else {
+          this.backdrop = maxActive;
+        }
         break;
     }
     this.cd.detectChanges();
@@ -141,17 +202,11 @@ export class SnotifyComponent implements OnInit, OnDestroy {
     this.emitter.unsubscribe();
   }
   remove() {
-    if (this.closeOnBackground && this.getNotificationLength() > 0) {
+    if (!this.withBackdrop || this.withBackdrop.length === 0) return;
+    const closableToasts = this.withBackdrop.filter(toast => toast.config.closeOnBackgroundClick);
+    if (closableToasts.length > 0) {
       this.isBackdropClick = true;
-      Object.keys(this.notifications).forEach(position => {
-        this.notifications[position].forEach(toast => this.service.remove(toast.id));
-      });
+      closableToasts.forEach(toast => this.service.remove(toast.id));
     }
-  }
-  getNotificationLength = (): number => {
-    if (!this.notifications) {
-      return 0;
-    }
-    return Object.values(this.notifications).reduce((acc, curr) => acc + curr.length, 0);
   }
 }

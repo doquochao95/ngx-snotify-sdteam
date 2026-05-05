@@ -38,7 +38,6 @@ export class AppComponent {
         maxOnScreen: this.dockMax,
         // @ts-ignore
         filterDuplicates: this.filterDuplicates,
-        closeOnBackgroundClick: this.closeOnBackGroundClick
       }
     });
     return {
@@ -49,7 +48,8 @@ export class AppComponent {
       timeout: this.timeout,
       showProgressBar: this.progressBar,
       closeOnClick: this.closeClick,
-      pauseOnHover: this.pauseHover
+      pauseOnHover: this.pauseHover,
+      closeOnBackgroundClick: this.closeOnBackGroundClick
     };
   }
 

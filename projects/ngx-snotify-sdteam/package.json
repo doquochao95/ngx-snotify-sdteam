@@ -1,7 +1,7 @@
 {
   "name": "ngx-snotify-sdteam",
   "description": "",
-  "version": "16.1.1",
+  "version": "16.1.2",
   "license": "MIT",
   "peerDependencies": {
     "@angular/common": "16",
