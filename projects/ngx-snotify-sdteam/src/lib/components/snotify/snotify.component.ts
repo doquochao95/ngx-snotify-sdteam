@@ -15,7 +15,11 @@ export class SnotifyComponent implements OnInit, OnDestroy {
   /**
    * Toasts array
    */
-  notifications: SnotifyNotifications;
+  notifications: SnotifyNotifications = {
+    leftTop: [], leftCenter: [], leftBottom: [],
+    rightTop: [], rightCenter: [], rightBottom: [],
+    centerTop: [], centerCenter: [], centerBottom: []
+  };
   /**
    * Toasts emitter
    */
@@ -79,22 +83,33 @@ export class SnotifyComponent implements OnInit, OnDestroy {
   stateChanged(event: { type: SnotifyEventType, toast: SnotifyToast }) {
     switch (event.type) {
       case 'beforeShow':
-        if (this.backdrop < 0)
+        if (this.backdrop < 0 && event.toast.config.backdrop >= 0) {
           this.backdrop = 0;
+        }
         break;
       case 'shown':
-        this.backdrop = this.withBackdrop[this.withBackdrop.length - 1]?.config.backdrop ?? -1;
+        // Get the maximum backdrop value from all active toasts
+        this.backdrop = Math.max(...this.withBackdrop.map(t => t.config.backdrop), -1);
         break;
       case 'beforeHide':
-        if ((this.withBackdrop.length === 1 && this.withBackdrop.some(x => x.id == event.toast.id) || this.isBackdropClick))
+        // Calculate backdrop excluding the one that is hiding
+        const remainingWithBackdrop = this.withBackdrop.filter(t => t.id !== event.toast.id);
+        if (remainingWithBackdrop.length === 0 || this.isBackdropClick) {
           this.backdrop = 0;
+        } else {
+          this.backdrop = Math.max(...remainingWithBackdrop.map(t => t.config.backdrop), -1);
+        }
         break;
       case 'hidden':
-        if ((this.withBackdrop.length === 1 && this.withBackdrop.some(x => x.id == event.toast.id) || this.isBackdropClick))
+        if (this.withBackdrop.filter(t => t.id !== event.toast.id).length === 0 || this.isBackdropClick) {
           this.backdrop = -1;
+        }
+        // Reset isBackdropClick only when backdrop is fully hidden
+        if (this.backdrop === -1) {
+          this.isBackdropClick = false;
+        }
         break;
     }
-    this.isBackdropClick = false
     this.cd.detectChanges();
   }
 
@@ -104,16 +119,17 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    * @returns SnotifyNotifications
    */
   splitToasts(toasts: SnotifyToast[]): SnotifyNotifications {
-    const result: SnotifyNotifications = {};
-
-    for (const property in SnotifyPosition) {
-      if (SnotifyPosition.hasOwnProperty(property)) {
-        result[SnotifyPosition[property]] = [];
-      }
-    }
+    const result: SnotifyNotifications = {
+      leftTop: [], leftCenter: [], leftBottom: [],
+      rightTop: [], rightCenter: [], rightBottom: [],
+      centerTop: [], centerCenter: [], centerBottom: []
+    };
 
     toasts.forEach((toast: SnotifyToast) => {
-      result[toast.config.position as string].push(toast);
+      const position = toast.config.position as string;
+      if (result[position]) {
+        result[position].push(toast);
+      }
     });
 
     return result;
@@ -126,33 +142,17 @@ export class SnotifyComponent implements OnInit, OnDestroy {
     this.emitter.unsubscribe();
   }
   remove() {
-    let notlen = this.getNotificationLength()
-    if (this.closeOnBackground && notlen > 0) {
-      this.isBackdropClick = true
-      if (this.notifications.centerTop.length > 0)
-        this.notifications.centerTop.map(x => this.service.remove(x.id))
-      if (this.notifications.centerCenter.length > 0)
-        this.notifications.centerCenter.map(x => this.service.remove(x.id))
-      if (this.notifications.centerBottom.length > 0)
-        this.notifications.centerBottom.map(x => this.service.remove(x.id))
-      if (this.notifications.leftTop.length > 0)
-        this.notifications.leftTop.map(x => this.service.remove(x.id))
-      if (this.notifications.leftCenter.length > 0)
-        this.notifications.leftCenter.map(x => this.service.remove(x.id))
-      if (this.notifications.leftBottom.length > 0)
-        this.notifications.leftBottom.map(x => this.service.remove(x.id))
-      if (this.notifications.rightTop.length > 0)
-        this.notifications.rightTop.map(x => this.service.remove(x.id))
-      if (this.notifications.rightCenter.length > 0)
-        this.notifications.rightCenter.map(x => this.service.remove(x.id))
-      if (this.notifications.rightBottom.length > 0)
-        this.notifications.rightBottom.map(x => this.service.remove(x.id))
+    if (this.closeOnBackground && this.getNotificationLength() > 0) {
+      this.isBackdropClick = true;
+      Object.keys(this.notifications).forEach(position => {
+        this.notifications[position].forEach(toast => this.service.remove(toast.id));
+      });
     }
   }
   getNotificationLength = (): number => {
-    let result = this.notifications.centerBottom.length + this.notifications.centerCenter.length + this.notifications.centerTop.length +
-      this.notifications.leftBottom.length + this.notifications.leftCenter.length + this.notifications.leftTop.length +
-      this.notifications.rightBottom.length + this.notifications.rightCenter.length + this.notifications.rightTop.length
-    return result
+    if (!this.notifications) {
+      return 0;
+    }
+    return Object.values(this.notifications).reduce((acc, curr) => acc + curr.length, 0);
   }
 }

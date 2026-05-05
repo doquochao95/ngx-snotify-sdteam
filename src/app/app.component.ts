@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { SnotifyPosition, SnotifyService, SnotifyToastConfig } from 'ngx-snotify-sdteam';
+import { Snotify, SnotifyPosition, SnotifyService, SnotifyToastConfig } from 'ngx-snotify-sdteam';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -25,7 +25,7 @@ export class AppComponent {
   bodyMaxLength = 80;
   closeOnBackGroundClick = false;
 
-  constructor(private snotifyService: SnotifyService) {}
+  constructor(private snotifyService: SnotifyService) { }
 
   /*
   Change global configuration
@@ -38,7 +38,7 @@ export class AppComponent {
         maxOnScreen: this.dockMax,
         // @ts-ignore
         filterDuplicates: this.filterDuplicates,
-        closeOnBackgroundClick : this.closeOnBackGroundClick
+        closeOnBackgroundClick: this.closeOnBackGroundClick
       }
     });
     return {
@@ -76,7 +76,7 @@ export class AppComponent {
   }
 
   onAsyncLoading() {
-    const errorAction = new Observable(observer => {
+    const errorAction = new Observable<Snotify>(observer => {
       setTimeout(() => {
         observer.error({
           title: 'Error',
@@ -85,7 +85,7 @@ export class AppComponent {
       }, 2000);
     });
 
-    const successAction = new Observable(observer => {
+    const successAction = new Observable<Snotify>(observer => {
       setTimeout(() => {
         observer.next({
           body: 'Still loading.....'
@@ -117,7 +117,7 @@ export class AppComponent {
     this.snotifyService.async(
       'Called with promise',
       'Error async',
-      new Promise((resolve, reject) => {
+      new Promise<Snotify>((resolve, reject) => {
         setTimeout(
           () =>
             reject({
@@ -143,22 +143,21 @@ export class AppComponent {
     this.snotifyService.confirm(this.body, this.title, {
       ...config,
       buttons: [
-        { text: 'Yes', action: () => console.log('Clicked: Yes'), bold: false },
-        { text: 'No', action: () => console.log('Clicked: No') },
+        { text: 'Yes', action: () => console.log('Clicked: Yes'), bold: true, focus: false },
+        { text: 'No', action: () => console.log('Clicked: No'), bold: false, focus: false },
         {
           text: 'Later',
           action: toast => {
             console.log('Clicked: Later');
             this.snotifyService.remove(toast.id);
-          }
+          }, bold: false, focus: false
         },
         {
           text: 'Close',
           action: toast => {
             console.log('Clicked: Close');
             this.snotifyService.remove(toast.id);
-          },
-          bold: true
+          }, bold: false, focus: true
         }
       ]
     });

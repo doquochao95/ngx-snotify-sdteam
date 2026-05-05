@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, Input, ViewEncapsulation } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Input,
+  QueryList,
+  ViewChildren,
+  ViewEncapsulation
+} from '@angular/core';
 import { SnotifyService } from '../../services/snotify.service';
 import { SnotifyToast } from '../../models/snotify-toast.model';
 
@@ -12,12 +21,24 @@ import { SnotifyToast } from '../../models/snotify-toast.model';
 /**
  * Buttons component
  */
-export class ButtonsComponent {
+export class ButtonsComponent implements AfterViewInit {
   /**
    * Get buttons Array
    */
   @Input() toast: SnotifyToast;
-  constructor(private service: SnotifyService) {}
+  @ViewChildren('btn') buttons: QueryList<ElementRef>;
+
+  constructor(private service: SnotifyService) { }
+
+  ngAfterViewInit() {
+    this.toast.config.buttons.forEach((button, index) => {
+      if (button.focus) {
+        setTimeout(() => {
+          this.buttons.toArray()[index].nativeElement.focus();
+        }, 0);
+      }
+    });
+  }
 
   /**
    * remove toast

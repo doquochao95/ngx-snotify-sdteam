@@ -4,6 +4,7 @@ import {
   Component,
   EventEmitter,
   Input,
+  NgZone,
   OnDestroy,
   OnInit,
   Output,
@@ -24,7 +25,7 @@ export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Get toast from notifications array
    */
-  @Input() toast: any | SnotifyToast;
+  @Input() toast: SnotifyToast | any;
   @Output() stateChanged = new EventEmitter<{ type: SnotifyEventType, toast: SnotifyToast }>();
 
   toastDeletedSubscription: Subscription;
@@ -34,6 +35,10 @@ export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
    * requestAnimationFrame id
    */
   animationFrame: number;
+  /**
+   * List of active timeouts
+   */
+  timeouts: any[] = [];
 
   /**
    * Toast state
@@ -46,7 +51,11 @@ export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
     promptType: SnotifyStyle.prompt
   };
 
-  constructor(private service: SnotifyService, private cd: ChangeDetectorRef) { }
+  constructor(
+    private service: SnotifyService,
+    private cd: ChangeDetectorRef,
+    private zone: NgZone
+  ) { }
 
   // Lifecycles
 
@@ -72,11 +81,12 @@ export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
   ngAfterViewInit() {
     this.stateChanged.emit({ type: 'beforeShow', toast: this.toast });
     this.state.animation = 'snotifyToast--in';
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       this.stateChanged.emit({ type: 'shown', toast: this.toast });
       this.state.animation = this.toast.config.animation.enter;
-      this.onExitTransitionEnd()
+      this.onExitTransitionEnd();
     }, this.service.config.toast.animation.time / 2); // time to show toast push animation (snotifyToast--in)
+    this.timeouts.push(timeout);
     this.cd.detectChanges();
   }
 
@@ -85,6 +95,7 @@ export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   ngOnDestroy(): void {
     cancelAnimationFrame(this.animationFrame);
+    this.timeouts.forEach(t => clearTimeout(t));
     this.toastChangedSubscription.unsubscribe();
     this.toastDeletedSubscription.unsubscribe();
   }
@@ -109,12 +120,14 @@ export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
     this.state.isDestroying = true;
     this.stateChanged.emit({ type: 'beforeHide', toast: this.toast });
     this.state.animation = this.toast.config.animation.exit;
-    setTimeout(() => {
+    const timeout1 = setTimeout(() => {
       this.stateChanged.emit({ type: 'hidden', toast: this.toast });
       this.state.animation = 'snotifyToast--out';
       this.toast.eventEmitter.next('hidden');
-      setTimeout(() => this.service.remove(this.toast.id, true), this.toast.config.animation.time / 2);
+      const timeout2 = setTimeout(() => this.service.remove(this.toast.id, true), this.toast.config.animation.time / 2);
+      this.timeouts.push(timeout2);
     }, this.toast.config.animation.time / 2);
+    this.timeouts.push(timeout1);
   }
 
   /**
@@ -165,23 +178,29 @@ export class ToastComponent implements OnInit, OnDestroy, AfterViewInit {
    * @param startTime number
    */
   startTimeout(startTime: number = 0) {
-    const start = performance.now();
-    const calculate = () => {
-      this.animationFrame = requestAnimationFrame(timestamp => {
-        const runtime = timestamp + startTime - start;
-        const progress = Math.min(runtime / this.toast.config.timeout, 1);
-        if (this.state.paused) {
-          cancelAnimationFrame(this.animationFrame);
-        } else if (runtime < this.toast.config.timeout) {
-          this.state.progress = progress;
-          calculate();
-        } else {
-          this.state.progress = 1;
-          cancelAnimationFrame(this.animationFrame);
-          this.service.remove(this.toast.id);
-        }
-      });
-    };
-    calculate();
+    cancelAnimationFrame(this.animationFrame);
+    this.zone.runOutsideAngular(() => {
+      const start = performance.now();
+      const calculate = () => {
+        this.animationFrame = requestAnimationFrame(timestamp => {
+          const runtime = timestamp + startTime - start;
+          const progress = Math.min(runtime / this.toast.config.timeout, 1);
+          if (this.state.paused) {
+            cancelAnimationFrame(this.animationFrame);
+          } else if (runtime < this.toast.config.timeout) {
+            this.state.progress = progress;
+            this.cd.detectChanges();
+            calculate();
+          } else {
+            this.state.progress = 1;
+            cancelAnimationFrame(this.animationFrame);
+            this.zone.run(() => {
+              this.service.remove(this.toast.id);
+            });
+          }
+        });
+      };
+      calculate();
+    });
   }
 }

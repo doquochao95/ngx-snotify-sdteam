@@ -14,10 +14,10 @@
     "sourceMap": true,
     "paths": {
       "ngx-snotify-sdteam": [
-        "dist/ngx-snotify-sdteam"
+        "projects/ngx-snotify-sdteam/src/public-api.ts"
       ],
       "ngx-snotify-sdteam/*": [
-        "dist/ngx-snotify-sdteam/*"
+        "projects/ngx-snotify-sdteam/src/lib/*"
       ]
     },
     "declaration": false,

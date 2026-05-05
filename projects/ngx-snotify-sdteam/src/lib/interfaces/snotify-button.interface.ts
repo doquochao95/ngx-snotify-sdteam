@@ -21,4 +21,8 @@ export interface SnotifyButton {
    * Should buttons text be bold.
    */
   bold?: boolean;
+  /**
+   * Should button be focused.
+   */
+  focus?: boolean;
 }
