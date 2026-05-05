@@ -49,7 +49,11 @@ export class SnotifyComponent implements OnInit, OnDestroy {
    */
   withBackdrop: SnotifyToast[];
   closeOnBackground: boolean;
-  isBackdropClick: boolean = false
+  isBackdropClick: boolean = false;
+  /**
+   * Set of toast IDs that are currently hiding (in beforeHide state)
+   */
+  hidingToasts = new Set<number>();
   constructor(private service: SnotifyService, private cd: ChangeDetectorRef) { }
 
   /**
@@ -75,39 +79,34 @@ export class SnotifyComponent implements OnInit, OnDestroy {
     });
   }
 
-  // TODO: fix backdrop if more than one toast called in a row
   /**
    * Changes the backdrop opacity
    * @param event SnotifyEventType
    */
   stateChanged(event: { type: SnotifyEventType, toast: SnotifyToast }) {
+    if (event.type === 'beforeHide') this.hidingToasts.add(event.toast.id);
+
+    const activeBackdrops = this.withBackdrop
+      .filter(t => !this.hidingToasts.has(t.id))
+      .map(t => t.config.backdrop);
+    const maxActive = activeBackdrops.length ? Math.max(...activeBackdrops) : -1;
+
     switch (event.type) {
       case 'beforeShow':
-        if (this.backdrop < 0 && event.toast.config.backdrop >= 0) {
-          this.backdrop = 0;
-        }
+        if (this.backdrop < 0 && event.toast.config.backdrop >= 0) this.backdrop = 0;
         break;
       case 'shown':
-        // Get the maximum backdrop value from all active toasts
-        this.backdrop = Math.max(...this.withBackdrop.map(t => t.config.backdrop), -1);
+        if (event.toast.config.backdrop >= 0) this.backdrop = maxActive;
         break;
       case 'beforeHide':
-        // Calculate backdrop excluding the one that is hiding
-        const remainingWithBackdrop = this.withBackdrop.filter(t => t.id !== event.toast.id);
-        if (remainingWithBackdrop.length === 0 || this.isBackdropClick) {
-          this.backdrop = 0;
-        } else {
-          this.backdrop = Math.max(...remainingWithBackdrop.map(t => t.config.backdrop), -1);
-        }
+        this.backdrop = Math.max(maxActive, 0);
         break;
       case 'hidden':
-        if (this.withBackdrop.filter(t => t.id !== event.toast.id).length === 0 || this.isBackdropClick) {
+        if (maxActive < 0 || this.isBackdropClick) {
           this.backdrop = -1;
-        }
-        // Reset isBackdropClick only when backdrop is fully hidden
-        if (this.backdrop === -1) {
           this.isBackdropClick = false;
         }
+        this.hidingToasts.delete(event.toast.id);
         break;
     }
     this.cd.detectChanges();
